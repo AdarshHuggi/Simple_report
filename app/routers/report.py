@@ -67,7 +67,8 @@ def generate_query(payload: dict = Body(...)):
         ],
         "filters": [str],      # WHERE conditions
         "having": [str],       # HAVING conditions
-        "order_by": [ [str, str] ]  # [field, direction]
+        "order_by": [ [str, str] ],  # [field, direction]
+        "group_by": [str]      # GROUP BY fields (optional)
     }
     """
     qb = SQLQueryBuilder(base_table=payload["base_table"])
@@ -81,5 +82,8 @@ def generate_query(payload: dict = Body(...)):
         qb.add_filter(h, is_aggregate=True)
     for ob in payload.get("order_by", []):
         qb.add_order_by(ob[0], ob[1])
+    # Add group by if present
+    if "group_by" in payload and payload["group_by"]:
+        qb.set_group_by(payload["group_by"])
     sql = qb.build_query()
     return {"query": sql}

@@ -87,10 +87,11 @@ window.initReportBuilder = function () {
       }
     }
 
-    // WHERE, HAVING, ORDER BY from UI (only if enabled)
+    // WHERE, HAVING, ORDER BY, GROUP BY from UI (only if enabled)
     let filters = [];
     let having = [];
     let order_by = [];
+    let group_by = [];
 
     let whereEnable = document.getElementById("whereEnable");
     let whereInput = document.getElementById("whereInput");
@@ -124,6 +125,21 @@ window.initReportBuilder = function () {
       order_by.push([orderField.value.trim(), orderDir.value]);
     }
 
+    // GROUP BY
+    let groupEnable = document.getElementById("groupEnable");
+    let groupInput = document.getElementById("groupInput");
+    if (
+      groupEnable &&
+      groupEnable.checked &&
+      groupInput &&
+      groupInput.value.trim()
+    ) {
+      group_by = groupInput.value
+        .split(",")
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0);
+    }
+
     // Send to backend
     const payload = {
       base_table: checkedTables[0],
@@ -132,6 +148,7 @@ window.initReportBuilder = function () {
       filters,
       having,
       order_by,
+      group_by, // <-- add group_by to payload
     };
 
     try {
@@ -399,6 +416,29 @@ window.initReportBuilder = function () {
     orderDiv.appendChild(orderField);
     orderDiv.appendChild(orderDir);
     optionsDiv.appendChild(orderDiv);
+
+    // GROUP BY
+    let groupDiv = document.createElement("div");
+    groupDiv.style.marginTop = "0.5em";
+    let groupEnable = document.createElement("input");
+    groupEnable.type = "checkbox";
+    groupEnable.id = "groupEnable";
+    groupEnable.style.marginRight = "0.5em";
+    let groupLabel = document.createElement("label");
+    groupLabel.textContent = "GROUP BY: ";
+    let groupInput = document.createElement("input");
+    groupInput.type = "text";
+    groupInput.placeholder = "e.g. table1.col1, table2.col2";
+    groupInput.style.width = "350px";
+    groupInput.id = "groupInput";
+    groupInput.disabled = true;
+    groupEnable.onchange = function () {
+      groupInput.disabled = !groupEnable.checked;
+    };
+    groupDiv.appendChild(groupEnable);
+    groupDiv.appendChild(groupLabel);
+    groupDiv.appendChild(groupInput);
+    optionsDiv.appendChild(groupDiv);
 
     sqlDiv.parentNode.insertBefore(optionsDiv, sqlDiv);
 

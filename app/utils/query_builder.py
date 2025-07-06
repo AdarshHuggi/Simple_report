@@ -7,6 +7,7 @@ class SQLQueryBuilder:
         self.filters = []          # Non-aggregated filters -> WHERE
         self.having_filters = []   # Aggregated filters -> HAVING
         self.order_by = []         # (field, ASC/DESC)
+        self.group_by_fields = None  # Explicit GROUP BY fields
 
     def add_join(self, join_type, table, on_condition):
         self.joins.append(f"{join_type.upper()} JOIN {table} ON {on_condition}")
@@ -26,6 +27,10 @@ class SQLQueryBuilder:
     def add_order_by(self, field, direction="ASC"):
         self.order_by.append(f"{field} {direction.upper()}")
 
+    def set_group_by(self, fields):
+        """Explicitly set GROUP BY fields (list of field names)."""
+        self.group_by_fields = fields
+
     def build_query(self):
         select_parts = self.select_fields.copy()
         for field, agg in self.aggregations.items():
@@ -39,10 +44,14 @@ class SQLQueryBuilder:
         if self.filters:
             query += "\nWHERE " + " AND ".join(self.filters)
 
-        if self.aggregations:
+        # Use explicit group_by_fields if set, else default to select_fields if aggregations exist
+        group_by = None
+        if self.group_by_fields is not None:
+            group_by = ", ".join(self.group_by_fields)
+        elif self.aggregations:
             group_by = ", ".join(self.select_fields)
-            if group_by:
-                query += f"\nGROUP BY {group_by}"
+        if group_by:
+            query += f"\nGROUP BY {group_by}"
 
         if self.having_filters:
             query += "\nHAVING " + " AND ".join(self.having_filters)

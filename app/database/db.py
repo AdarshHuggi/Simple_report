@@ -1,9 +1,14 @@
 import sqlite3
+import os
 from datetime import datetime
 
-DB_PATH = "f:/projects/report_app/app/database/report_app.db"
+DB_PATH = "f:/projects/Simple_report/app/database/report_app.db"  # Fixed path (case and slashes)
 
 def get_connection():
+    # Ensure parent directory exists
+    db_dir = os.path.dirname(DB_PATH)
+    if not os.path.exists(db_dir):
+        os.makedirs(db_dir, exist_ok=True)
     return sqlite3.connect(DB_PATH)
 
 def create_tables_and_insert_data():
