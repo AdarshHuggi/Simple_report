@@ -42,6 +42,16 @@ window.initReportBuilder = function () {
   }
   window.sqlDiv = sqlDiv;
 
+  // Add result table area if not present
+  let resultDiv = document.getElementById("resultDiv");
+  if (!resultDiv) {
+    resultDiv = document.createElement("div");
+    resultDiv.id = "resultDiv";
+    resultDiv.style.marginTop = "1em";
+    container.appendChild(resultDiv);
+  }
+  window.resultDiv = resultDiv;
+
   // Remove old click handler if any
   genQueryBtn.onclick = null;
 
@@ -159,12 +169,69 @@ window.initReportBuilder = function () {
       });
       if (!res.ok) {
         sqlDiv.innerHTML = `<b>Error:</b> ${res.status} ${res.statusText}`;
+        resultDiv.innerHTML = "";
         return;
       }
       const data = await res.json();
       sqlDiv.innerHTML = `<b>Generated SQL:</b><pre>${data.query}</pre>`;
+
+      // Add "Run Query" button
+      let runBtn = document.getElementById("runQueryBtn");
+      if (!runBtn) {
+        runBtn = document.createElement("button");
+        runBtn.id = "runQueryBtn";
+        runBtn.textContent = "Run Query";
+        runBtn.style.marginLeft = "1em";
+        sqlDiv.appendChild(runBtn);
+      } else {
+        runBtn.style.display = "inline-block";
+      }
+
+      runBtn.onclick = async function () {
+        resultDiv.innerHTML = "Loading...";
+        try {
+          const execRes = await fetch("/reports/execute_query", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ query: data.query }),
+          });
+          if (!execRes.ok) {
+            const err = await execRes.json();
+            resultDiv.innerHTML = `<b>Error:</b> ${
+              err.detail || execRes.statusText
+            }`;
+            return;
+          }
+          const execData = await execRes.json();
+          if (!execData.columns || execData.columns.length === 0) {
+            resultDiv.innerHTML = "<i>No data returned.</i>";
+            return;
+          }
+          // Render table
+          let html =
+            "<table border='1' style='border-collapse:collapse; margin-top:1em;'><thead><tr>";
+          execData.columns.forEach((col) => {
+            html += `<th style="padding:4px 8px;">${col}</th>`;
+          });
+          html += "</tr></thead><tbody>";
+          execData.rows.forEach((row) => {
+            html += "<tr>";
+            row.forEach((cell) => {
+              html += `<td style="padding:4px 8px;">${
+                cell !== null ? cell : ""
+              }</td>`;
+            });
+            html += "</tr>";
+          });
+          html += "</tbody></table>";
+          resultDiv.innerHTML = html;
+        } catch (e) {
+          resultDiv.innerHTML = `<b>Error:</b> ${e}`;
+        }
+      };
     } catch (e) {
       sqlDiv.innerHTML = `<b>Error:</b> ${e}`;
+      resultDiv.innerHTML = "";
     }
   };
 

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Query, Body
+from fastapi import APIRouter, Query, Body, HTTPException
 from typing import List, Dict
 from app.database.db import get_connection
 from app.models import models
@@ -87,3 +87,33 @@ def generate_query(payload: dict = Body(...)):
         qb.set_group_by(payload["group_by"])
     sql = qb.build_query()
     return {"query": sql}
+
+@report_router.post("/execute_query")
+def execute_query(payload: dict = Body(...)):
+    """
+    Execute a SQL query and return the result as JSON.
+    Expects payload:
+    {
+        "query": str
+    }
+    Returns:
+    {
+        "columns": [str],
+        "rows": [ [value, ...], ... ]
+    }
+    """
+    sql = payload.get("query")
+    if not sql:
+        raise HTTPException(status_code=400, detail="No query provided")
+    conn = get_connection()
+    try:
+        cursor = conn.execute(sql)
+        columns = [desc[0] for desc in cursor.description] if cursor.description else []
+        rows = cursor.fetchall()
+        data = [list(row) for row in rows]
+        return {"columns": columns, "rows": data}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    finally:
+        conn.close()
+
