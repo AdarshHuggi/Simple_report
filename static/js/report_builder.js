@@ -10,7 +10,7 @@ window.initReportBuilder = function () {
   `;
 
   window.tablesRow = document.getElementById("tablesRow");
-  window.fieldsRows = document.getElementById("fieldsRows");
+  window.fieldsRows = document.getElementById("fieldsRows"); // <-- fix: remove extra space
 
   // Create and append selectedFieldsDiv if not present
   let selectedFieldsDiv = document.getElementById("selectedFieldsDiv");
