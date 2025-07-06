@@ -57,7 +57,7 @@ def generate_query(payload: dict = Body(...)):
     Expects payload:
     {
         "base_table": str,
-        "fields": [str],  # e.g. ["table1.col1", "table2.col2"]
+        "fields": [ {"field": str, "agg_func": str|None} ],  # e.g. [{"field": "table1.col1", "agg_func": "SUM"}, ...]
         "joins": [
             {
                 "join_type": "INNER"|"LEFT"|"RIGHT",
@@ -72,8 +72,17 @@ def generate_query(payload: dict = Body(...)):
     }
     """
     qb = SQLQueryBuilder(base_table=payload["base_table"])
-    for field in payload.get("fields", []):
-        qb.add_field(field)
+    for field_obj in payload.get("fields", []):
+        # Support both old (str) and new (dict) format for backward compatibility
+        if isinstance(field_obj, dict):
+            field = field_obj.get("field")
+            agg_func = field_obj.get("agg_func")
+            if agg_func:
+                qb.add_field(field, is_aggregate=True, agg_func=agg_func)
+            else:
+                qb.add_field(field)
+        else:
+            qb.add_field(field_obj)
     for join in payload.get("joins", []):
         qb.add_join(join["join_type"], join["table"], join["on_condition"])
     for f in payload.get("filters", []):

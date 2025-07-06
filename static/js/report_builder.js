@@ -61,9 +61,23 @@ window.initReportBuilder = function () {
       tablesRow.querySelectorAll("input[type=checkbox]:checked")
     ).map((cb) => cb.value);
 
+    // Collect fields and their aggregate functions
     const checkedFields = Array.from(
       fieldsRows.querySelectorAll("input.field-checkbox:checked")
     ).map((cb) => cb.value);
+
+    // Collect aggregate functions for checked fields
+    let fields = [];
+    checkedFields.forEach((field) => {
+      const aggSel = fieldsRows.querySelector(
+        `select.agg-func-select[data-field="${field}"]`
+      );
+      if (aggSel && aggSel.value) {
+        fields.push({ field: field, agg_func: aggSel.value });
+      } else {
+        fields.push({ field: field, agg_func: null });
+      }
+    });
 
     if (checkedTables.length === 0 || checkedFields.length === 0) return;
 
@@ -153,12 +167,12 @@ window.initReportBuilder = function () {
     // Send to backend
     const payload = {
       base_table: checkedTables[0],
-      fields: checkedFields,
+      fields, // now array of {field, agg_func}
       joins,
       filters,
       having,
       order_by,
-      group_by, // <-- add group_by to payload
+      group_by,
     };
 
     try {
@@ -173,7 +187,9 @@ window.initReportBuilder = function () {
         return;
       }
       const data = await res.json();
-      sqlDiv.innerHTML = `<b>Generated SQL:</b><pre>${data.query}</pre>`;
+      // Use a <pre> with CSS for wrapping and scrolling
+      sqlDiv.innerHTML = `<b>Generated SQL:</b>
+        <pre style="white-space:pre-wrap; word-break:break-all; overflow-x:auto; max-width:100%; background:#f4f4f4; padding:0.5em 1em; border-radius:4px;">${data.query}</pre>`;
 
       // Add "Run Query" button
       let runBtn = document.getElementById("runQueryBtn");
@@ -272,6 +288,9 @@ window.initReportBuilder = function () {
     };
   }
 
+  // Add a list of aggregate functions
+  const AGG_FUNCS = ["", "SUM", "AVG", "MIN", "MAX", "COUNT"];
+
   async function handleTableSelection() {
     const checkedTables = Array.from(
       tablesRow.querySelectorAll("input[type=checkbox]:checked")
@@ -289,7 +308,7 @@ window.initReportBuilder = function () {
     const res = await fetch(`/reports/columns?${params}`);
     const columnsData = await res.json();
 
-    // Show columns for each table as a row of checkboxes
+    // Show columns for each table as a row of checkboxes + aggregate select
     Object.entries(columnsData).forEach(([table, columns]) => {
       const tableRowDiv = document.createElement("div");
       tableRowDiv.style.display = "flex";
@@ -313,8 +332,27 @@ window.initReportBuilder = function () {
         cb.value = `${table}.${col}`;
         cb.className = "field-checkbox";
         cb.onchange = handleFieldSelection;
+
+        // Aggregate function select
+        const aggSel = document.createElement("select");
+        aggSel.className = "agg-func-select";
+        aggSel.setAttribute("data-field", `${table}.${col}`);
+        AGG_FUNCS.forEach((func) => {
+          const opt = document.createElement("option");
+          opt.value = func;
+          opt.textContent = func ? func : "None";
+          aggSel.appendChild(opt);
+        });
+        aggSel.disabled = true;
+        // Enable/disable agg select with checkbox
+        cb.onchange = function () {
+          aggSel.disabled = !cb.checked;
+          handleFieldSelection();
+        };
+
         label.appendChild(cb);
         label.appendChild(document.createTextNode(col));
+        label.appendChild(aggSel);
         tableRowDiv.appendChild(label);
       });
 
@@ -335,8 +373,13 @@ window.initReportBuilder = function () {
 
       const ul = document.createElement("ul");
       checkedFields.forEach((f) => {
+        // Show aggregate function if selected
+        const aggSel = fieldsRows.querySelector(
+          `select.agg-func-select[data-field="${f}"]`
+        );
+        const agg = aggSel && aggSel.value ? ` (${aggSel.value})` : "";
         const li = document.createElement("li");
-        li.textContent = f;
+        li.textContent = f + agg;
         ul.appendChild(li);
       });
       selectedFieldsDiv.appendChild(ul);

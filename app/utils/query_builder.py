@@ -31,10 +31,16 @@ class SQLQueryBuilder:
         """Explicitly set GROUP BY fields (list of field names)."""
         self.group_by_fields = fields
 
+    def _alias_for_agg(self, agg, field):
+        # Remove table prefix and replace . with _
+        field_part = field.replace(".", "_")
+        return f"{agg.lower()}_{field_part}"
+
     def build_query(self):
         select_parts = self.select_fields.copy()
         for field, agg in self.aggregations.items():
-            select_parts.append(f"{agg}({field}) AS {agg.lower()}_{field}")
+            alias = self._alias_for_agg(agg, field)
+            select_parts.append(f"{agg}({field}) AS {alias}")
 
         query = f"SELECT {', '.join(select_parts)}\nFROM {self.base_table}"
 
