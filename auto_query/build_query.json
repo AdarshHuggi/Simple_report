@@ -1,0 +1,19 @@
+{
+  "select": [
+    "Orders.OrderID",
+    "Customers.CustomerName",
+    "SUM(Orders.Amount) AS TotalAmount"
+  ],
+  "from_": "Orders",
+  "joins": [
+    {
+      "type": "inner",
+      "table": "Customers",
+      "on": "Orders.CustomerID = Customers.ID"
+    }
+  ],
+  "filters": ["Orders.Region = 'West'", "Orders.Status = 'Shipped'"],
+  "group_by": ["Customers.CustomerName"],
+  "order_by": [{ "field": "TotalAmount", "direction": "DESC" }],
+  "limit": 10
+}

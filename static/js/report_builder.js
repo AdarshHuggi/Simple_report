@@ -240,7 +240,29 @@ window.initReportBuilder = function () {
             html += "</tr>";
           });
           html += "</tbody></table>";
+
+          // Add download report button after the table
+          html += `
+            <div style="margin-top:0.5em; text-align:right;">
+              <button id="downloadReportBtn" style="padding:0.4em 1em; background:#0078d4; color:#fff; border:none; border-radius:4px; cursor:pointer;">
+                Download Report
+              </button>
+            </div>
+          `;
+
           resultDiv.innerHTML = html;
+
+          // Attach download logic to the button (calls global function)
+          const downloadBtn = document.getElementById("downloadReportBtn");
+          if (downloadBtn) {
+            downloadBtn.onclick = function () {
+              if (window.downloadResultAsExcel) {
+                window.downloadResultAsExcel(execData);
+              } else {
+                alert("Download function not loaded.");
+              }
+            };
+          }
         } catch (e) {
           resultDiv.innerHTML = `<b>Error:</b> ${e}`;
         }
