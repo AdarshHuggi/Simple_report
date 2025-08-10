@@ -118,3 +118,7 @@ inventory_query = builder_inventory.build_query()
 
 print("\nInventory Report Query:")
 print(inventory_query)
+
+
+
+
